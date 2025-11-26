@@ -1,0 +1,179 @@
+/* ------------------------------------- */
+/* 基础和背景 */
+/* ------------------------------------- */
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden; /* Prevent scrollbars */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #0d1a29; /* Dark blue/black background */
+    color: #c0d9f7; /* Light blue text */
+}
+
+#app {
+    height: 100vh;
+}
+
+#app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+/* ------------------------------------- */
+/* 顶部标题栏 */
+/* ------------------------------------- */
+#header-bar {
+    height: 60px;
+    background-color: rgba(13, 26, 41, 0.9);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 30px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+    z-index: 10;
+}
+
+.platform-title {
+    color: #4dc4ff; /* Bright title color */
+    font-size: 26px;
+    font-weight: 300;
+    letter-spacing: 5px;
+}
+
+.time-display, .weather-display {
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+/* ------------------------------------- */
+/* 核心内容区布局 (Flex) */
+/* ------------------------------------- */
+#main-content {
+    flex-grow: 1;
+    display: flex;
+    position: relative; /* Reference for absolute positioning */
+}
+
+/* Common style for left/right dashboards */
+.dashboard-panel {
+    width: 380px; /* Fixed width */
+    padding: 15px 10px;
+    background-color: rgba(13, 26, 41, 0.85); /* Semi-transparent background */
+    border: 1px solid rgba(77, 196, 255, 0.2);
+    box-sizing: border-box;
+    z-index: 5;
+    pointer-events: auto; 
+    overflow-y: auto; /* Allow scrolling if content overflows */
+    max-height: calc(100vh - 80px); /* Limit max height */
+}
+
+#left-dashboard {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    bottom: 10px;
+}
+
+#right-dashboard {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    bottom: 10px;
+}
+
+/* Map viewer wrapper styles */
+.map-viewer-wrapper {
+    flex-grow: 1; /* Occupy all remaining space */
+    height: 100%;
+    width: 100%;
+    position: absolute;
+}
+
+/* ------------------------------------- */
+/* Dashboard module styles */
+/* ------------------------------------- */
+
+.module-box {
+    margin-bottom: 20px;
+    padding: 10px;
+    border: 1px solid rgba(77, 196, 255, 0.1);
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+.module-title {
+    font-size: 16px;
+    color: #4dc4ff;
+    padding-bottom: 5px;
+    margin-top: 0;
+    margin-bottom: 10px;
+    border-bottom: 1px solid rgba(77, 196, 255, 0.1);
+}
+
+/* Placeholder styles (mimicking charts) */
+.chart-placeholder {
+    height: 400px;
+    background: linear-gradient(to right, #004480, #0080ff44); /* Blue glow effect */
+    border-radius: 3px;
+    opacity: 0.7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+
+.chart-style-2 {
+    height: 150px;
+    background: linear-gradient(to top, #0080ff44, #004480);
+}
+
+.list-placeholder {
+    height: 200px;
+    background: repeating-linear-gradient(
+        0deg,
+        #0080ff10,
+        #0080ff10 20px,
+        transparent 20px,
+        transparent 21px
+    );
+    border: 1px solid #0080ff44;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+
+/* Center Bottom Floating Control */
+.center-bottom-info {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(77, 196, 255, 0.1);
+    color: #4dc4ff;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    z-index: 5;
+    pointer-events: none;
+}
+
+/* OpenLayers Specific Styling Overrides */
+.ol-zoom-extent, .ol-zoom-in, .ol-zoom-out, .ol-rotate {
+    background-color: rgba(13, 26, 41, 0.7) !important;
+    color: #4dc4ff !important;
+    border-radius: 4px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+.ol-control button:hover {
+    background-color: rgba(77, 196, 255, 0.2) !important;
+}
+.ol-scale-line-inner {
+    border: 1px solid #4dc4ff;
+    border-top: none;
+    color: #4dc4ff;
+    font-size: 12px;
+    text-shadow: 0 0 3px #000;
+}
