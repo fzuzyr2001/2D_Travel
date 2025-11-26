@@ -67,7 +67,7 @@ async function fetchBusRoute(start, end) {
 
   // 这里以“福州”为例，city / cityd 你可以换成对应城市
   const url =
-    `https://restapi.amap.com/v3/direction/transit/integrated?` +
+    `http://restapi.amap.com/v3/direction/transit/integrated?` +
     `key=${AMAP_KEY}&origin=${origin}&destination=${destination}&city=福州&cityd=福州`;
 
   try {
