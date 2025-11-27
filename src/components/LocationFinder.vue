@@ -2,122 +2,118 @@
   <div class="module-box location-finder">
     <h2 class="module-title">📍 我的位置与周边</h2>
 
-    <p v-if="userLocation">
+    <p v-if="userLocationValid">
       当前位置：
       <span class="location-coords">
         {{ userLocation.lat.toFixed(4) }}, {{ userLocation.lng.toFixed(4) }}
       </span>
     </p>
-    <p v-else>正在获取位置...</p>
+    <p v-else>正在获取位置或位置无效...</p>
 
     <div class="list-section">
       <h3 class="section-title">✨ 最近 10 个景点</h3>
-      <ul class="poi-list">
+      <ul v-if="nearbyScenicSpots.length" class="poi-list">
         <li
-          v-for="poi in nearbyScenicSpots"
-          :key="poi.id"
+          v-for="(item, index) in nearbyScenicSpots"
+          :key="item.id || index"
           class="poi-item"
         >
-          <span class="poi-name">
-            {{ poi.name }}
-            <span class="poi-distance">({{ formatDistance(poi.distance) }})</span>
-          </span>
-          <button class="action-button" @click="goToDestination(poi)">
-            → 到这去
-          </button>
+          <div class="poi-main">
+            <span class="poi-name">{{ item.name }}</span>
+            <span class="poi-distance">{{ formatDistance(item.distance) }}</span>
+          </div>
+          <div class="poi-sub">
+            <span class="poi-addr">{{ item.address || '地址未知' }}</span>
+            <button class="action-button" @click="goToPoi(item)">到这去</button>
+          </div>
         </li>
       </ul>
+      <p v-else class="empty-text">暂无可用景点数据。</p>
     </div>
 
     <div class="list-section">
-      <h3 class="section-title">🍜 附近 5 家美食</h3>
-      <ul class="poi-list">
+      <h3 class="section-title">🍜 最近 5 个美食</h3>
+      <ul v-if="nearbyRestaurants.length" class="poi-list">
         <li
-          v-for="poi in nearbyRestaurants"
-          :key="poi.id"
+          v-for="(item, index) in nearbyRestaurants"
+          :key="item.id || index"
           class="poi-item"
         >
-          <span class="poi-name">
-            {{ poi.name }}
-            <span class="poi-distance">({{ formatDistance(poi.distance) }})</span>
-          </span>
-          <button class="action-button" @click="goToDestination(poi)">
-            → 到这去
-          </button>
+          <div class="poi-main">
+            <span class="poi-name">{{ item.name }}</span>
+            <span class="poi-distance">{{ formatDistance(item.distance) }}</span>
+          </div>
+          <div class="poi-sub">
+            <span class="poi-addr">{{ item.address || '地址未知' }}</span>
+            <button class="action-button" @click="goToPoi(item)">到这去</button>
+          </div>
         </li>
       </ul>
+      <p v-else class="empty-text">暂无可用美食数据。</p>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { getDistance } from 'geolib';
 
-// 这里按你原来的路径来，你可以根据自己项目调整
-import scenicData from '../data/fuzhou_tourist_poi.json';
-import restaurantData from '../data/fuzhou_food_poi.json';
+import scenicRaw from '../data/fuzhou_tourist_poi.json';
+import restaurantRaw from '../data/fuzhou_food_poi.json';
 
 const props = defineProps({
   userLocation: {
     type: Object,
-    default: null
-  }
+    default: null,
+  },
 });
 
 const emit = defineEmits(['select-destination']);
 
-// ========== 1. 数据预处理：统一 POI 格式 ==========
-
-const formatPoiData = (data, type) =>
-  data.map((item, idx) => {
-    // 尝试多种可能字段，避免 undefined
-    const lat =
-      item.lat ??
-      item.latitude ??
-      item.LAT ??
-      item.y ??
-      item.Y ??
-      (item.location && (item.location.lat ?? item.location.latitude)) ??
-      null;
-
-    const lng =
-      item.lng ??
-      item.longitude ??
-      item.LNG ??
-      item.x ??
-      item.X ??
-      (item.location && (item.location.lng ?? item.location.longitude)) ??
-      null;
-
-    return {
-      id: item.id ?? idx,
-      name: item.name ?? item.title ?? '未命名地点',
-      type,
-      lat: typeof lat === 'string' ? Number(lat) : lat,
-      lng: typeof lng === 'string' ? Number(lng) : lng,
-      distance: Infinity
-    };
-  });
-
-// 全部 POI 列表
-const allScenicSpots = formatPoiData(scenicData, 'ScenicSpot');
-const allRestaurants = formatPoiData(restaurantData, 'Restaurant');
-const allPois = [...allScenicSpots, ...allRestaurants];
-
-// ========== 2. 状态：附近 POI 列表 ==========
-
 const nearbyScenicSpots = ref([]);
 const nearbyRestaurants = ref([]);
 
-// ========== 3. 计算距离 & 筛选 ==========
+// 统一判断 userLocation 是否有效
+const userLocationValid = computed(() => {
+  const loc = props.userLocation;
+  return (
+    loc &&
+    typeof loc.lat === 'number' &&
+    typeof loc.lng === 'number' &&
+    !Number.isNaN(loc.lat) &&
+    !Number.isNaN(loc.lng)
+  );
+});
 
+// 统一处理 POI 原始数据中经纬度字段可能不一致的问题
+function normalizePoi(poi) {
+  // 优先使用 lat/lng
+  let lat = poi.lat ?? poi.latitude ?? poi.LAT ?? poi.y;
+  let lng = poi.lng ?? poi.longitude ?? poi.LNG ?? poi.x;
+
+  lat = Number(lat);
+  lng = Number(lng);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return null;
+  }
+
+  return {
+    ...poi,
+    lat,
+    lng,
+  };
+}
+
+// 合并两个 JSON（一个打上 type = ScenicSpot，一个 type = Restaurant）
+const allPois = [
+  ...scenicRaw.map((d) => ({ ...d, type: 'ScenicSpot' })),
+  ...restaurantRaw.map((d) => ({ ...d, type: 'Restaurant' })),
+];
+
+// 核心计算函数
 function findNearbyPois(location) {
-  if (
-    !location ||
-    typeof location.lat !== 'number' ||
-    typeof location.lng !== 'number'
-  ) {
+  if (!userLocationValid.value) {
     console.warn('无效的用户位置:', location);
     nearbyScenicSpots.value = [];
     nearbyRestaurants.value = [];
@@ -125,18 +121,13 @@ function findNearbyPois(location) {
   }
 
   const poisWithDistance = allPois
-    .map((poi) => {
-      if (
-        typeof poi.lat !== 'number' ||
-        typeof poi.lng !== 'number' ||
-        Number.isNaN(poi.lat) ||
-        Number.isNaN(poi.lng)
-      ) {
-        console.warn('POI 坐标无效，跳过:', poi);
-        return { ...poi, distance: Infinity };
+    .map((raw) => {
+      const poi = normalizePoi(raw);
+      if (!poi) {
+        console.warn('POI 坐标无效，跳过:', raw);
+        return null;
       }
 
-      // geolib 参数：{ latitude, longitude }
       const distance = getDistance(
         { latitude: location.lat, longitude: location.lng },
         { latitude: poi.lat, longitude: poi.lng }
@@ -144,10 +135,10 @@ function findNearbyPois(location) {
 
       return {
         ...poi,
-        distance
+        distance,
       };
     })
-    .filter((p) => Number.isFinite(p.distance))
+    .filter((p) => p && Number.isFinite(p.distance))
     .sort((a, b) => a.distance - b.distance);
 
   nearbyScenicSpots.value = poisWithDistance
@@ -163,43 +154,47 @@ function findNearbyPois(location) {
 watch(
   () => props.userLocation,
   (newLoc) => {
-    if (newLoc) {
+    if (newLoc && userLocationValid.value) {
       findNearbyPois(newLoc);
+    } else {
+      nearbyScenicSpots.value = [];
+      nearbyRestaurants.value = [];
     }
   },
-  { immediate: true, deep: true }
+  { immediate: true }
 );
 
-// ========== 4. 工具函数 & 事件 ==========
+// 点击「到这去」
+function goToPoi(poi) {
+  emit('select-destination', poi);
+}
 
+// 显示距离
 function formatDistance(d) {
   if (!Number.isFinite(d)) return '未知距离';
   if (d < 1000) return `${d} m`;
   return `${(d / 1000).toFixed(2)} km`;
 }
-
-function goToDestination(poi) {
-  emit('select-destination', poi);
-}
 </script>
 
 <style scoped>
 .location-finder {
-  margin-top: 10px;
+  font-size: 13px;
 }
 
 .location-coords {
-  font-weight: bold;
-  color: #4ade80;
+  color: #22c55e;
+  font-weight: 500;
 }
 
 .list-section {
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .section-title {
-  font-size: 14px;
+  font-size: 13px;
   margin-bottom: 6px;
+  color: #e5e7eb;
 }
 
 .poi-list {
@@ -209,20 +204,39 @@ function goToDestination(poi) {
 }
 
 .poi-item {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+  padding: 6px 0;
+}
+
+.poi-main {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 0;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
 }
 
 .poi-name {
-  flex: 1;
+  font-weight: 500;
 }
 
 .poi-distance {
-  margin-left: 10px;
-  font-size: 0.85em;
+  color: #4ade80;
+  font-size: 12px;
+}
+
+.poi-sub {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.poi-addr {
+  flex: 1;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.empty-text {
+  font-size: 12px;
   color: #a1a1aa;
 }
 
@@ -231,9 +245,10 @@ function goToDestination(poi) {
   border: 1px solid #4caf50;
   color: #4caf50;
   cursor: pointer;
-  padding: 3px 8px;
+  padding: 2px 8px;
   margin-left: 10px;
   border-radius: 4px;
   font-size: 12px;
+  white-space: nowrap;
 }
 </style>
